@@ -31,6 +31,8 @@
   <body>
 	<section class="container">
 	<?php
+  
+  $superuserkey = 543210;
 
 	// pingdom api request - checks
 	$ch = curl_init();	
@@ -79,8 +81,32 @@
 	}
 
 	// debug informations
-	if(isset($_GET['debug'])) {
-		print_r($arrChecks);
+	if(($showCheck != 0 && in_array($superuserkey, $showCheck)) && isset($_GET['debug'])) {
+    if($_GET['debug'] == "deepdive") {
+      foreach ($arrChecks->checks as $check) {
+        // pingdom api request - get check details
+        $ch3 = curl_init();	
+        curl_setopt($ch3, CURLOPT_URL, "https://api.pingdom.com/api/2.1/checks/".$check->id);
+        curl_setopt($ch3, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch3, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch3, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($ch3, CURLOPT_USERPWD, "support.migros-ch@mgb.ch:m96&m1ts");
+        curl_setopt($ch3, CURLOPT_HTTPHEADER, array("app-key: z1zygypqxr5ikzt23wug0cnoopaqqaok"));
+        curl_setopt($ch3, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch3, CURLOPT_VERBOSE, 1);
+        
+        $curl_response3 = curl_exec($ch3);
+        curl_close($ch3);
+        $arrCheckdetails = json_decode($curl_response3);
+        echo "<pre>";
+        print_r($arrCheckdetails);
+        echo "</pre>";
+      } 
+    } else {
+      echo "<pre>";
+      print_r($arrChecks);
+      echo "</pre>";
+    }
     exit;
 	}
 
@@ -89,14 +115,11 @@
 	echo "<p>Refresh alle 90 Sekunden</p>\n";
   
   // category links
-  if($showCheck != 0 && in_array(543210, $showCheck)) {
+  if($showCheck != 0 && in_array(superuserkey, $showCheck)) {
     echo '<a href="http://media.migros.ch/monitoring/?check=2129204,790608,1922885,1922888,1526957,1922886,1482395,972027,1689232,1979788,1957207">migros.ch</a> | ';
     echo '<a href="http://media.migros.ch/monitoring/?check=972260,1602331,3758203,2265019,3758176,3758089,3758149,2268735,2271851,3758377,3758404,3758428,3860014">M-API</a> | ';
     echo '<a href="http://media.migros.ch/monitoring/?check=3758377,3758404,3388594,3388813,848099,3758089,3758149,3758404,2268735,2271851,3860014,3388516,3388543">DWH-WS</a> | ';	  
 	  echo '<a href="http://media.migros.ch/monitoring/?check=3388516,3388543,3388594,3388639,3325018,3388657,3388813,3388762,3388648,3388729">Testsysteme</a>';
-    echo "<br/><br/>";
-  } else {
-    echo '<a href="http://media.migros.ch/monitoring/?check=543210">Show all</a>';
     echo "<br/><br/>";
   }
   echo '<table id="dashboard" class="table table-striped table-bordered table-sm">';
@@ -141,7 +164,7 @@
           }
         } 
         
-        if($showCheck != 0 && in_array($check->id, $arrPublicId) && (in_array($check->id, $showCheck) || in_array(543210, $showCheck))) {
+        if($showCheck != 0 && in_array($check->id, $arrPublicId) && (in_array($check->id, $showCheck) || in_array($superuserkey, $showCheck))) {
           //print_r($check);
           echo "<tr>";
           echo "<td><img src='./".$statusImg."' width='22' height='22' title='".$check->status."'></td>";
@@ -168,4 +191,3 @@ $(document).ready(function() {
 	} );
 } );
 </script>
-
