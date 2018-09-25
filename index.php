@@ -59,6 +59,19 @@
 	curl_setopt($ch2, CURLOPT_RETURNTRANSFER, 1);
 	curl_setopt($ch2, CURLOPT_VERBOSE, 1);
 	curl_setopt($ch2, CURLOPT_STDERR, $fp2);
+  
+  // pingdom api request - transaction checks
+  $ch3 = curl_init();	
+  $fp3 = fopen('errorlog3.txt', 'w');
+  curl_setopt($ch3, CURLOPT_URL, "https://api.pingdom.com/api/2.0/tms.recipes");
+  curl_setopt($ch3, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch3, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch3, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+  curl_setopt($ch3, CURLOPT_USERPWD, "support.migros-ch@mgb.ch:m96&m1ts");
+  curl_setopt($ch3, CURLOPT_HTTPHEADER, array("app-key: z1zygypqxr5ikzt23wug0cnoopaqqaok"));
+  curl_setopt($ch3, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch3, CURLOPT_VERBOSE, 1);
+  curl_setopt($ch3, CURLOPT_STDERR, $fp3);
 
 	if(isset($_GET['check'])) {
 		$showCheck = explode(',', $_GET['check']);
@@ -73,6 +86,11 @@
 	$curl_response2 = curl_exec($ch2);
 	curl_close($ch2);
 	$arrShared = json_decode($curl_response2);
+  
+  $curl_response3 = curl_exec($ch3);
+	curl_close($ch3);
+	$arrTrans = json_decode($curl_response3);
+  //print_r($arrTrans); exit;
 
 	// list of public checks
 	$arrPublicId = array();
@@ -106,6 +124,9 @@
       echo "<pre>";
       print_r($arrChecks);
       echo "</pre>";
+      echo "<pre>";
+      print_r($arrTrans);
+      echo "</pre>";
     }
     exit;
 	}
@@ -138,42 +159,53 @@
 	// stati
 	$arrStati = array("down","up");
   
+  // transaction cheks output
+  foreach ($arrTrans->recipes as $transcheck) {
+    if($transcheck->active == "YES" && $transcheck->status == "FAILING") {
+      echo "<tr>";
+      echo "<td><img src='./down.png' width='22' height='22' title='FAILING'></td>";
+      echo "<td><a><b>".$transcheck->name."</b></a></td>";
+      echo "<td></td><td style='font-weight:bold; color:red'>".date('Y-m-d, H:i:s')."</td><td></td>";
+      echo "</tr>\n";
+    }
+  }
+  
   // print_r($arrChecks);exit;
   
 	// checks output
-    foreach ($arrChecks->checks as $check) {
+  foreach ($arrChecks->checks as $check) {
         
-        // status image
-        if($check->status == "up") {
-          $statusImg = "up.png";
-        } else if($check->status == "paused") {
-          $statusImg = "paused.png";
-        } else {
-          $statusImg = "down.png";
+      // status image
+      if($check->status == "up") {
+        $statusImg = "up.png";
+      } else if($check->status == "paused") {
+        $statusImg = "paused.png";
+      } else {
+        $statusImg = "down.png";
+      }
+           
+      //$statusImg = $check->status == "up" ? "up.png" : "down.png";
+      $checkLink = "http://stats.pingdom.com/gmn5333biru8/" . $check->id;
+
+      $lasterror = "";
+      $lasterrorStyle = "";
+      if(isset($check->lasterrortime)) {
+        $lasterror = date("Y-m-d, H:i:s", $check->lasterrortime);
+        if(date("d.m.Y", $check->lasterrortime) == date("d.m.Y")) {
+          $lasterrorStyle = " style='font-weight:bold; color:red' ";
         }
-             
-        //$statusImg = $check->status == "up" ? "up.png" : "down.png";
-        $checkLink = "http://stats.pingdom.com/gmn5333biru8/" . $check->id;
-        
-        $lasterror = "";
-        $lasterrorStyle = "";
-        if(isset($check->lasterrortime)) {
-          $lasterror = date("Y-m-d, H:i:s", $check->lasterrortime);
-          if(date("d.m.Y", $check->lasterrortime) == date("d.m.Y")) {
-            $lasterrorStyle = " style='font-weight:bold; color:red' ";
-          }
-        } 
-        
-        if($showCheck != 0 && in_array($check->id, $arrPublicId) && (in_array($check->id, $showCheck) || in_array($superuserkey, $showCheck))) {
-          //print_r($check);
-          echo "<tr>";
-          echo "<td><img src='./".$statusImg."' width='22' height='22' title='".$check->status."'></td>";
-          echo "<td><a href='".$checkLink."' target='_blank'><b>".$check->name."</b></a></td>";
-          echo "<td>".$check->hostname."</td>";
-          echo "<td " . $lasterrorStyle . ">".$lasterror."</td>";
-          echo "<td>".$check->id."</td>";
-          echo "</tr>\n";
-        }
+      } 
+
+      if($showCheck != 0 && in_array($check->id, $arrPublicId) && (in_array($check->id, $showCheck) || in_array($superuserkey, $showCheck))) {
+        //print_r($check);
+        echo "<tr>";
+        echo "<td><img src='./".$statusImg."' width='22' height='22' title='".$check->status."'></td>";
+        echo "<td><a href='".$checkLink."' target='_blank'><b>".$check->name."</b></a></td>";
+        echo "<td>".$check->hostname."</td>";
+        echo "<td " . $lasterrorStyle . ">".$lasterror."</td>";
+        echo "<td>".$check->id."</td>";
+        echo "</tr>\n";
+      }
     }
 	echo "</tbody>\n";
 	echo "</table>\n";
@@ -191,3 +223,4 @@ $(document).ready(function() {
 	} );
 } );
 </script>
+
