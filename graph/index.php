@@ -18,18 +18,24 @@
 
 <html>
 <head>
-  <?php 
-  echo "<title>".$man." - Graphs</title>";
-  ?>
-  <meta http-equiv="refresh" content="180">
+<?php 
+  echo "<title>".$man." - Graphs</title>\n";
+?>
+<meta http-equiv="refresh" content="180">
 </head>
 <body>
-  <?php
+<?php
   echo "<h1>".$man."</h1>\n";
+  /* ************** */
   echo "<h2>Http-Sitzungen</h2>\n";
   foreach($$man as $inst) echo "<a href='http://".$inst.":8080/monitoring' target='_blank'><img src='http://".$inst.":8080/monitoring?width=500&height=300&graph=httpSessions' /></a>\n";
+  /* ************** */
   echo "<h2>CPU</h2>\n";
   foreach($$man as $inst) echo "<a href='http://".$inst.":8080/monitoring' target='_blank'><img src='http://".$inst.":8080/monitoring?width=500&height=300&graph=cpu' /></a>\n";
-  ?>
+  /* ************** */
+  echo "<h2>Aktive Threads</h2>\n";
+  foreach($$man as $inst) echo "<a href='http://".$inst.":8080/monitoring' target='_blank'><img src='http://".$inst.":8080/monitoring?width=500&height=300&graph=tomcatBusyThreads' /></a>\n";
+  /* ************** */
+?>
 </body>
 </html>
