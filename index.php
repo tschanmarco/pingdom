@@ -2,12 +2,13 @@
 <html>
   <head>
     <meta charset="UTF-8">
-	<title>Monitoring Digital Operation</title>
-  <link rel="icon" type="image/png" href="fav.png" sizes="16x16">
-	<meta http-equiv="refresh" content="90">
-	<meta name="robots" content="noindex">
+    <title>Monitoring Digital Operation</title>
+    <link rel="icon" type="image/png" href="fav.png" sizes="16x16">
+    <meta http-equiv="refresh" content="90">
+    <meta name="robots" content="noindex">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 	
     <!-- Einbinden des Bootstrap-Stylesheets -->
     <link rel="stylesheet" href="css/bootstrap.min.css">
@@ -15,17 +16,18 @@
     <!-- optional: Einbinden der jQuery-Bibliothek -->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	
-	<script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
 
     <!-- optional: Einbinden der Bootstrap-JavaScript-Plugins -->
     <script src="js/bootstrap.min.js"></script>
 
-	<style type="text/css">
+    <style type="text/css">
 		body, a { font-family: Courier New; }
 		h1 { font: 18px "Courier New"; }
 		a { font-family: Arial, Verdana; }
-	</style>	
+    .trans { font-family: Arial, Verdana; font-weight: bold; color:red; }
+    </style>	
   </head>
 
   <body>
@@ -33,6 +35,10 @@
 	<?php
   
   $superuserkey = 543210;
+  $iconsize = 22;
+  $tablewidthwide = "2500px";
+  $dashboard = false;
+  $transfailfile = "transaction_failures.json";
 
 	// pingdom api request - checks
 	$ch = curl_init();	
@@ -78,6 +84,19 @@
 	} else {
 		$showCheck = 0;
 	}
+  
+  $dashboard = false;
+	if(isset($_GET['dashboard'])) {
+    $iconsize = 55;
+    $dashboard = true;
+?>
+    <style>
+      h1  {font-size: 58px; font-weight: bold}
+      body {font-size: 24px;}
+      .container {width: 1250px;}
+    </style>
+<?php
+  }
 
 	$curl_response = curl_exec($ch);
 	curl_close($ch);
@@ -143,8 +162,14 @@
 	  echo '<a href="http://media.migros.ch/monitoring/?check=3388516,3388543,3388594,3388639,3325018,3388657,3388813,3388762,3388648,3388729">Testsysteme</a>';
     echo "<br/><br/>";
   }
-  echo '<table id="dashboard" class="table table-striped table-bordered table-sm">';
-	echo "<thead><tr><th>Up</th><th>Checkname</th><th>Hostname</th><th><nobr>letzter Ausfall</nobr></th><th>ID</th></tr></thead>\n";
+  echo "<table id='dashboard' class='table table-striped table-bordered table-sm'>";
+	echo "<thead><tr>";
+  echo "<th>Up</th>";
+  echo "<th>Checkname</th>";
+  echo "<th>Hostname</th>";
+  echo "<th><nobr>letzter Ausfall</nobr></th>";
+  if (!$dashboard) echo "<th>ID</th>";
+  echo "</tr></thead>\n";
 	echo "<tbody>\n";
 
 	// check sort
@@ -160,14 +185,41 @@
 	$arrStati = array("down","up");
   
   // transaction cheks output
-  foreach ($arrTrans->recipes as $transcheck) {
-    if($transcheck->active == "YES" && $transcheck->status == "FAILING") {
-      echo "<tr>";
-      echo "<td><img src='./down.png' width='22' height='22' title='FAILING'></td>";
-      echo "<td><a><b>".$transcheck->name."</b></a></td>";
-      echo "<td></td><td style='font-weight:bold; color:red'>".date('Y-m-d, H:i:s')."</td><td></td>";
-      echo "</tr>\n";
-    }
+  foreach ($arrTrans->recipes as $key => $transcheck) {
+    if($transcheck->active == "YES") {
+      $arrTransFailure = json_decode(file_get_contents($transfailfile), true);
+      if($transcheck->status == "FAILING") {
+        
+        // write last failure time to file
+        $arrTransFailure[$key] = date('Y-m-d, H:i:s');
+        file_put_contents($transfailfile, json_encode($arrTransFailure));
+        if($showCheck != 0 && (in_array($key, $showCheck) || in_array($superuserkey, $showCheck))) {
+          echo "<tr>";
+          echo "<td><img src='./down.png' width='$iconsize' height='$iconsize' title='FAILING'></td>";
+          echo "<td><a><b>".$transcheck->name."</b></a></td>";
+          echo "<td>TRANSACTION</td>";
+          echo "<td style='font-weight:bold; color:red; white-space:nowrap'>".date('Y-m-d, H:i:s')."</td>";
+          if (!$dashboard) echo "<td>".$key."</td>";
+          echo "</tr>\n";
+        }
+      } else {
+        $lasterrorStyle = "";
+        if($arrTransFailure[$key]) {
+          if(substr($arrTransFailure[$key], 0, 10) == date("Y-m-d")) {
+            $lasterrorStyle = " style='font-weight:bold; color:red; white-space:nowrap'";
+          }
+        } 
+        if($showCheck != 0 && (in_array($key, $showCheck) || in_array($superuserkey, $showCheck))) {
+          echo "<tr>";
+          echo "<td><img src='./up.png' width='$iconsize' height='$iconsize' title='SUCCESSFUL'></td>";
+          echo "<td><a><b>".$transcheck->name."</b></a></td>";
+          echo "<td>TRANSACTION</td>";
+          echo "<td " . $lasterrorStyle . ">".$arrTransFailure[$key]."</td>";
+          if (!$dashboard) echo "<td>".$key."</td>";
+          echo "</tr>\n";
+        }
+      }
+    } 
   }
   
   // print_r($arrChecks);exit;
@@ -192,18 +244,18 @@
       if(isset($check->lasterrortime)) {
         $lasterror = date("Y-m-d, H:i:s", $check->lasterrortime);
         if(date("d.m.Y", $check->lasterrortime) == date("d.m.Y")) {
-          $lasterrorStyle = " style='font-weight:bold; color:red' ";
+          $lasterrorStyle = " style='font-weight:bold; color:red; white-space:nowrap'";
         }
       } 
 
       if($showCheck != 0 && in_array($check->id, $arrPublicId) && (in_array($check->id, $showCheck) || in_array($superuserkey, $showCheck))) {
         //print_r($check);
         echo "<tr>";
-        echo "<td><img src='./".$statusImg."' width='22' height='22' title='".$check->status."'></td>";
+        echo "<td><img src='./".$statusImg."' width='$iconsize' height='$iconsize' title='".$check->status."'></td>";
         echo "<td><a href='".$checkLink."' target='_blank'><b>".$check->name."</b></a></td>";
         echo "<td>".$check->hostname."</td>";
         echo "<td " . $lasterrorStyle . ">".$lasterror."</td>";
-        echo "<td>".$check->id."</td>";
+        if (!$dashboard) echo "<td>".$check->id."</td>";
         echo "</tr>\n";
       }
     }
@@ -223,4 +275,3 @@ $(document).ready(function() {
 	} );
 } );
 </script>
-
