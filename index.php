@@ -186,7 +186,7 @@
   
   // transaction cheks output
   foreach ($arrTrans->recipes as $key => $transcheck) {
-    if($transcheck->active == "YES") {
+    if($transcheck->active == "YES" && !strpos($transcheck->name, "*hide*")) {
       $arrTransFailure = json_decode(file_get_contents($transfailfile), true);
       if($transcheck->status == "FAILING") {
         
