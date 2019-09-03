@@ -33,7 +33,6 @@
   <body>
   <section class="container">
   <?php
-  
   $superuserkey = 543210;
   $iconsize = 22;
   $tablewidthwide = "2500px";
@@ -180,11 +179,18 @@
   foreach ($arrTrans->recipes as $key => $transcheck) {
     if($transcheck->active == "YES" && !strpos($transcheck->name, "*hide*")) {
       $arrTransFailure = json_decode(file_get_contents($transfailfile), true);
+      
       if($transcheck->status == "FAILING") {
+        if(file_exists($key)) {
+          // write last failure time to file if first-fail file exists
+          $arrTransFailure[$key] = date('Y-m-d, H:i:s');
+          file_put_contents($transfailfile, json_encode($arrTransFailure));
+          //file_put_contents(time(), $curl_response3);
+        } else {
+          // write first-fail file
+          file_put_contents($key, date('Y-m-d, H:i:s'));
+        }
         
-        // write last failure time to file
-        $arrTransFailure[$key] = date('Y-m-d, H:i:s');
-        file_put_contents($transfailfile, json_encode($arrTransFailure));
         if($showCheck != 0 && (in_array($key, $showCheck) || in_array($superuserkey, $showCheck))) {
           echo "<tr>";
           echo "<td><img src='./down.png' width='$iconsize' height='$iconsize' title='FAILING'></td>";
@@ -195,6 +201,9 @@
           echo "</tr>\n";
         }
       } else {
+        // delete first-fail file
+        if(file_exists($key)) unlink($key);
+        
         $lasterrorStyle = "";
         if($arrTransFailure[$key]) {
           if(substr($arrTransFailure[$key], 0, 10) == date("Y-m-d")) {
